@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
   Alert,
@@ -17,6 +16,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
@@ -42,11 +42,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   // ============================================
   // Deep Link: Handle incoming reset-password URL
   // ============================================
+  const initialUrlHandled = React.useRef(false);
+
   useEffect(() => {
-    // Handle URL that launched the app (cold start)
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink(url);
-    });
+    // Handle URL that launched the app (cold start) — only once per session
+    if (!initialUrlHandled.current) {
+      initialUrlHandled.current = true;
+      Linking.getInitialURL().then((url) => {
+        if (url) handleDeepLink(url);
+      });
+    }
 
     // Handle URL received while app is already open (warm start)
     const subscription = Linking.addEventListener('url', ({ url }) => {
@@ -57,16 +62,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   }, []);
 
   const handleDeepLink = (url: string) => {
-    // Supabase appends the token as a hash fragment:
-    // anchordaily://reset-password#access_token=...&type=recovery
-    // expo-linking parses the fragment into queryParams
-    const parsed = Linking.parse(url);
-    const type = parsed.queryParams?.type as string | undefined;
-
-    if (type === 'recovery') {
-      // The session is automatically set by Supabase client
-      // when the deep link is handled — just switch to reset mode
-      setMode('reset');
+    try {
+      const parsed = Linking.parse(url);
+      const type = parsed.queryParams?.type as string | undefined;
+      if (type === 'recovery') {
+        setMode('reset');
+      }
+    } catch (err) {
+      console.warn('Failed to parse deep link URL:', err);
     }
   };
 
@@ -151,6 +154,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
     if (password.length < 6) {
       Alert.alert('Weak Password', 'Password must be at least 6 characters.');
       return;
@@ -167,14 +176,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
 
         if (error) throw error;
 
-        if (data.user) {
+        if (data.session?.user) {
           const now = new Date();
           const trialEnd = new Date(now);
           trialEnd.setDate(trialEnd.getDate() + 14);
 
-          await supabase.from('users').insert({
-            id: data.user.id,
-            email: data.user.email,
+          const { error: insertError } = await supabase.from('users').insert({
+            id: data.session.user.id,
+            email: data.session.user.email,
             selected_focus: selectedFocus,
             is_premium: false,
             subscription_status: 'trial',
@@ -182,17 +191,37 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
             trial_end_date: trialEnd.toISOString(),
           });
 
+          if (insertError) {
+            console.warn('Could not create user profile:', insertError.message);
+          }
+
           const { data: profile } = await supabase
             .from('users')
             .select('*')
-            .eq('id', data.user.id)
+            .eq('id', data.session.user.id)
             .single();
 
           if (profile) {
             setUser(profile);
           }
 
-          navigation.goBack();
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+        } else if (data.user && !data.session) {
+          // Email confirmation required — let the user continue as a guest
+          // while they wait for the confirmation email
+          Alert.alert(
+            'Check your email',
+            'We sent a confirmation link to ' +
+              email.trim() +
+              '. Tap the link to activate your account.\n\nYou can use the app in the meantime.',
+            [
+              {
+                text: 'Continue',
+                onPress: () =>
+                  navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] }),
+              },
+            ]
+          );
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -213,7 +242,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
             setUser(profile);
           }
 
-          navigation.goBack();
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
         }
       }
     } catch (error: any) {
@@ -298,7 +327,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setMode('signin')}>
               <Ionicons name="close" size={28} color={COLORS.textSecondary} />
             </TouchableOpacity>
 
@@ -441,6 +470,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               <Text style={styles.toggleLink}>{mode === 'signup' ? 'Sign In' : 'Sign Up'}</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Continue without account */}
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}
+          >
+            <Text style={styles.skipText}>Continue without account</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -537,5 +574,15 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  skipButton: {
+    alignItems: 'center',
+    marginTop: SIZES.paddingMd,
+    paddingVertical: SIZES.paddingSm,
+  },
+  skipText: {
+    fontSize: SIZES.sm,
+    color: COLORS.textMuted,
+    textDecorationLine: 'underline',
   },
 });

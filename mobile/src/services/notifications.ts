@@ -4,6 +4,7 @@
 import * as Notifications from 'expo-notifications';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
 // Configure notification handler
@@ -41,8 +42,23 @@ export async function registerForPushNotifications(
       return null;
     }
 
-    // Get Expo push token
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    // Configure Android notification channel BEFORE getting token
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('daily-reflection', {
+        name: 'Daily Reflection',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#7C9A8E',
+      });
+    }
+
+    // Get Expo push token — projectId required in Expo SDK 49+
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
     const token = tokenData.data;
 
     // Save token to database if user is authenticated
@@ -51,16 +67,6 @@ export async function registerForPushNotifications(
         .from('users')
         .update({ push_token: token, push_enabled: true })
         .eq('id', userId);
-    }
-
-    // Configure Android notification channel
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('daily-reflection', {
-        name: 'Daily Reflection',
-        importance: Notifications.AndroidImportance.DEFAULT,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#7C9A8E',
-      });
     }
 
     return token;

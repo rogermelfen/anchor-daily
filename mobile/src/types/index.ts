@@ -71,6 +71,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Paywall: undefined;
   ReflectionDetail: { reflectionId: string };
+  Reflect: undefined;
 };
 
 export type MainTabParamList = {

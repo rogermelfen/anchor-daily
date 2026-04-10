@@ -6,40 +6,23 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { FocusArea } from '../types';
+import { FOCUS_LABELS, FOCUS_VERSES, FOCUS_ICONS } from '../constants/focus';
 
 interface FocusSelectorProps {
   selected: FocusArea | null;
   onSelect: (focus: FocusArea) => void;
 }
 
-const FOCUS_OPTIONS: {
-  key: FocusArea;
-  title: string;
-  subtitle: string;
-  verse: string;
-  icon: string;
-}[] = [
-  {
-    key: 'stress',
-    title: 'Stress & Anxiety',
-    subtitle: 'Finding peace and rest in God when life feels overwhelming',
-    verse: '"Cast all your anxiety on him." — 1 Pet. 5:7',
-    icon: 'leaf-outline',
-  },
-  {
-    key: 'decisions',
-    title: 'Difficult Decisions',
-    subtitle: 'Seeking God\'s wisdom and discernment at life\'s crossroads',
-    verse: '"Trust in the Lord with all your heart." — Prov. 3:5',
-    icon: 'compass-outline',
-  },
-  {
-    key: 'relationships',
-    title: 'Relationships & Conflict',
-    subtitle: 'Loving others well through grace, forgiveness, and truth',
-    verse: '"Bear with each other and forgive." — Col. 3:13',
-    icon: 'heart-outline',
-  },
+const FOCUS_SUBTITLES: Record<FocusArea, string> = {
+  stress: 'Finding peace and rest in God when life feels overwhelming',
+  decisions: "Seeking God's wisdom and discernment at life's crossroads",
+  relationships: 'Loving others well through grace, forgiveness, and truth',
+};
+
+const FOCUS_OPTIONS: { key: FocusArea }[] = [
+  { key: 'stress' },
+  { key: 'decisions' },
+  { key: 'relationships' },
 ];
 
 export const FocusSelector: React.FC<FocusSelectorProps> = ({ selected, onSelect }) => {
@@ -59,18 +42,18 @@ export const FocusSelector: React.FC<FocusSelectorProps> = ({ selected, onSelect
           >
             <View style={[styles.iconContainer, isSelected && styles.iconContainerSelected]}>
               <Ionicons
-                name={option.icon as any}
+                name={FOCUS_ICONS[option.key] as any}
                 size={24}
                 color={isSelected ? COLORS.textOnPrimary : COLORS.primary}
               />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.title, isSelected && styles.titleSelected]}>
-                {option.title}
+                {FOCUS_LABELS[option.key]}
               </Text>
-              <Text style={styles.subtitle}>{option.subtitle}</Text>
+              <Text style={styles.subtitle}>{FOCUS_SUBTITLES[option.key]}</Text>
               <Text style={[styles.verse, isSelected && styles.verseSelected]}>
-                {option.verse}
+                {FOCUS_VERSES[option.key]}
               </Text>
             </View>
             {isSelected && (

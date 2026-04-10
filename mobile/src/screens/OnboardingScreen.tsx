@@ -1,8 +1,9 @@
 // ============================================
-// Practical Christian Daily - Onboarding / Welcome Screen
+// Anchor Daily - Onboarding / Welcome Screen
 // ============================================
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
 import { Button } from '../components';
@@ -15,7 +16,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Logo / Icon Area */}
         <View style={styles.iconArea}>
           <View style={styles.iconCircle}>
@@ -47,17 +51,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }
             text="A private journal to pray, reflect, and grow"
           />
         </View>
-      </View>
 
-      {/* CTA */}
-      <View style={styles.footer}>
+        {/* CTA */}
         <Button
           title="Get Started"
           onPress={() => navigation.navigate('ChooseFocus')}
           size="large"
           style={styles.button}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -74,19 +76,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: SIZES.paddingLg,
+    paddingTop: SIZES.paddingLg,
+    paddingBottom: SIZES.paddingXl,
     justifyContent: 'center',
   },
   iconArea: {
     alignItems: 'center',
-    marginBottom: SIZES.paddingXl,
+    marginBottom: SIZES.paddingLg,
   },
   iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -102,19 +106,20 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     textAlign: 'center',
     lineHeight: 42,
-    marginBottom: SIZES.paddingMd,
+    marginBottom: SIZES.paddingSm,
   },
   description: {
     fontSize: SIZES.md,
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: SIZES.paddingXl,
+    marginBottom: SIZES.paddingLg,
     paddingHorizontal: SIZES.paddingMd,
   },
   valueProps: {
-    gap: SIZES.paddingMd,
+    gap: SIZES.paddingSm,
     paddingHorizontal: SIZES.paddingSm,
+    marginBottom: SIZES.paddingLg,
   },
   valuePropRow: {
     flexDirection: 'row',
@@ -125,10 +130,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sm + 1,
     color: COLORS.textPrimary,
     flex: 1,
-  },
-  footer: {
-    paddingHorizontal: SIZES.paddingLg,
-    paddingBottom: SIZES.paddingXl,
   },
   button: {
     width: '100%',

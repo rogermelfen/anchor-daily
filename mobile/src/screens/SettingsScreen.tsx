@@ -1,17 +1,17 @@
 // ============================================
 // Anchor Daily - Settings / Profile Screen
 // ============================================
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { Button } from '../components';
@@ -19,8 +19,10 @@ import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../services/supabase';
 import { captureException } from '../services/sentry';
 import { FocusArea } from '../types';
+import { FOCUS_LABELS } from '../constants/focus';
 import Constants from 'expo-constants';
 import { Linking } from 'react-native';
+import { registerForPushNotifications, cancelDailyReminder, scheduleDailyReminder } from '../services/notifications';
 
 interface SettingsScreenProps {
   navigation: any;
@@ -35,33 +37,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     selectedFocus,
     signOut,
     updateUserFocus,
-    themeMode,
-    setThemeMode,
   } = useAppStore();
   const [pushEnabled, setPushEnabled] = useState(user?.push_enabled ?? false);
-
-  const themeModeLabels: Record<string, string> = {
-    system: 'System Default',
-    light: 'Light',
-    dark: 'Dark',
-  };
-
-  const handleChangeTheme = () => {
-    Alert.alert('Appearance', 'Choose your preferred theme:', [
-      { text: 'System Default', onPress: () => setThemeMode('system') },
-      { text: 'Light', onPress: () => setThemeMode('light') },
-      { text: 'Dark', onPress: () => setThemeMode('dark') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
-  const focusLabels: Record<string, string> = {
-    stress: 'Stress & Anxiety',
-    decisions: 'Difficult Decisions',
-    relationships: 'Relationships & Conflict',
-  };
-
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Keep pushEnabled in sync if user object is updated after store rehydration
+  useEffect(() => {
+    setPushEnabled(user?.push_enabled ?? false);
+  }, [user?.push_enabled]);
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -148,7 +131,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           signOut();
           navigation.reset({
             index: 0,
-            routes: [{ name: 'Onboarding' }],
+            routes: [{ name: 'Auth' }],
           });
         },
       },
@@ -175,12 +158,35 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
 
   const handleTogglePush = async (value: boolean) => {
     setPushEnabled(value);
-    // In production, register/unregister push token here
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ push_enabled: value })
-        .eq('id', user.id);
+    try {
+      if (value) {
+        const token = await registerForPushNotifications(user?.id);
+        if (!token) {
+          setPushEnabled(false);
+          Alert.alert(
+            'Permission Denied',
+            'Please enable notifications for Anchor Daily in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+          return;
+        }
+        await scheduleDailyReminder(8, 0);
+        // registerForPushNotifications already writes push_token + push_enabled: true to DB
+      } else {
+        await cancelDailyReminder();
+        if (user) {
+          await supabase
+            .from('users')
+            .update({ push_enabled: false, push_token: null })
+            .eq('id', user.id);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to toggle push notifications:', err);
+      setPushEnabled(!value);
     }
   };
 
@@ -269,15 +275,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <SettingsRow
             icon="compass-outline"
             title="Focus Area"
-            value={selectedFocus ? focusLabels[selectedFocus] : 'Not set'}
+            value={selectedFocus ? FOCUS_LABELS[selectedFocus] : 'Not set'}
             onPress={handleChangeFocus}
-          />
-
-          <SettingsRow
-            icon="moon-outline"
-            title="Appearance"
-            value={themeModeLabels[themeMode]}
-            onPress={handleChangeTheme}
           />
 
           <View style={styles.settingsRow}>
@@ -297,7 +296,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
         {/* About */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
-          <SettingsRow icon="information-circle-outline" title="About Anchor Daily" onPress={() => {}} />
+          <SettingsRow
+            icon="information-circle-outline"
+            title="About Anchor Daily"
+            onPress={() =>
+              Alert.alert(
+                'Anchor Daily',
+                'A practical Christian devotional app — one short reflection each morning, grounded in Scripture and designed for real life.\n\nBuilt with care for busy believers.',
+                [{ text: 'Close' }]
+              )
+            }
+          />
           <SettingsRow
             icon="document-text-outline"
             title="Privacy Policy"
@@ -331,7 +340,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           </View>
         )}
 
-        <Text style={styles.version}>Anchor Daily v1.0.0</Text>
+        <Text style={styles.version}>
+          Anchor Daily v{Constants.expoConfig?.version ?? '1.0.0'}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

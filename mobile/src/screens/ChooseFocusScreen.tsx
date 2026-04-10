@@ -2,7 +2,8 @@
 // Practical Christian Daily - Choose Focus Screen
 // ============================================
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SIZES } from '../constants/theme';
 import { Button, FocusSelector } from '../components';
 import { FocusArea } from '../types';
@@ -15,47 +16,55 @@ interface ChooseFocusScreenProps {
 
 export const ChooseFocusScreen: React.FC<ChooseFocusScreenProps> = ({ navigation }) => {
   const [localFocus, setLocalFocus] = useState<FocusArea | null>(null);
+  const [continuing, setContinuing] = useState(false);
   const { setSelectedFocus, setOnboardingComplete, updateUserFocus, isAuthenticated } =
     useAppStore();
 
   const handleContinue = async () => {
-    if (!localFocus) return;
+    if (!localFocus || continuing) return;
 
-    setSelectedFocus(localFocus);
-    setOnboardingComplete(true);
-    trackThemeSelected(localFocus);
-    trackEvent('onboarding_completed');
+    setContinuing(true);
+    try {
+      setSelectedFocus(localFocus);
+      setOnboardingComplete(true);
+      trackThemeSelected(localFocus);
+      trackEvent('onboarding_completed');
 
-    if (isAuthenticated) {
-      await updateUserFocus(localFocus);
+      if (isAuthenticated) {
+        await updateUserFocus(localFocus);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      } else {
+        navigation.navigate('Auth');
+      }
+    } finally {
+      setContinuing(false);
     }
-
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Where do you need{'\n'}God's wisdom most?</Text>
         <Text style={styles.subtitle}>
           Your daily devotional will be tailored to your current season of life. You can change
           this anytime.
         </Text>
-
-        <View style={styles.selectorContainer}>
-          <FocusSelector selected={localFocus} onSelect={setLocalFocus} />
-        </View>
-      </View>
+        <FocusSelector selected={localFocus} onSelect={setLocalFocus} />
+      </ScrollView>
 
       <View style={styles.footer}>
         <Button
-          title="Continue"
+          title={continuing ? 'Loading...' : 'Continue'}
           onPress={handleContinue}
           size="large"
-          disabled={!localFocus}
+          disabled={!localFocus || continuing}
+          loading={continuing}
           style={styles.button}
         />
       </View>
@@ -68,10 +77,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
     paddingHorizontal: SIZES.paddingLg,
-    paddingTop: SIZES.paddingXxl,
+    paddingTop: SIZES.paddingXl,
+    paddingBottom: SIZES.paddingMd,
   },
   title: {
     fontSize: SIZES.xxl,
@@ -84,9 +93,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 24,
     marginBottom: SIZES.paddingXl,
-  },
-  selectorContainer: {
-    flex: 1,
   },
   footer: {
     paddingHorizontal: SIZES.paddingLg,

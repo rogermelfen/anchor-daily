@@ -8,6 +8,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
 import { RootStackParamList, MainTabParamList } from '../types';
+import { useAppStore } from '../store/useAppStore';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import {
   OnboardingScreen,
   ChooseFocusScreen,
@@ -17,6 +19,8 @@ import {
   SettingsScreen,
   AuthScreen,
   PaywallScreen,
+  ReflectionDetailScreen,
+  ReflectScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -100,9 +104,19 @@ const MainTabs: React.FC = () => {
 
 // Root Stack Navigator
 export const AppNavigator: React.FC = () => {
+  const { hasCompletedOnboarding, isAuthenticated } = useAppStore();
+
+  // Guest users who completed onboarding go directly to MainTabs.
+  // Auth is only the starting point if onboarding hasn't been done.
+  const initialRoute: keyof RootStackParamList = !hasCompletedOnboarding
+    ? 'Onboarding'
+    : 'MainTabs';
+
   return (
+    <ErrorBoundary>
     <NavigationContainer linking={linking}>
       <Stack.Navigator
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: COLORS.background },
@@ -122,7 +136,18 @@ export const AppNavigator: React.FC = () => {
           component={PaywallScreen}
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
+        <Stack.Screen
+          name="ReflectionDetail"
+          component={ReflectionDetailScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="Reflect"
+          component={ReflectScreen}
+          options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
+    </ErrorBoundary>
   );
 };

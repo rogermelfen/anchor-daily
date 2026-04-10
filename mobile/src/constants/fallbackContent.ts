@@ -8,9 +8,15 @@
 
 import { Reflection, FocusArea } from '../types';
 
-const today = new Date().toISOString().split('T')[0];
+// Compute today's date at call time, not at module load time,
+// so the date stays accurate even if the app is left open overnight.
+function getToday(): string {
+  return new Date().toISOString().split('T')[0];
+}
 
-export const FALLBACK_REFLECTIONS: Record<FocusArea, Reflection> = {
+function makeFallbackReflections(): Record<FocusArea, Reflection> {
+  const today = getToday();
+  return {
   stress: {
     id: 'fallback-stress-1',
     title: 'The Myth of Control',
@@ -70,4 +76,11 @@ export const FALLBACK_REFLECTIONS: Record<FocusArea, Reflection> = {
     created_at: today,
     updated_at: today,
   },
-};
+  };
+}
+
+// Export as a function so callers always get today's correct date,
+// even if the app has been open since yesterday.
+export function getFallbackReflection(focus: FocusArea): Reflection {
+  return makeFallbackReflections()[focus];
+}

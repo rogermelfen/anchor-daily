@@ -6,7 +6,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   FlatList,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { Card } from '../components';
@@ -58,13 +58,17 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ navigation }) => {
     }
 
     setSaving(true);
-    const entry = await saveJournalEntry(newEntry.trim(), todayReflection?.id);
-    setSaving(false);
-
-    if (entry) {
-      setNewEntry('');
-    } else {
+    try {
+      const entry = await saveJournalEntry(newEntry.trim(), todayReflection?.id);
+      if (entry) {
+        setNewEntry('');
+      } else {
+        Alert.alert('Error', 'Could not save your entry. Please try again.');
+      }
+    } catch {
       Alert.alert('Error', 'Could not save your entry. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -88,7 +92,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={90}
       >
         {/* Header */}
@@ -142,7 +146,7 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ navigation }) => {
           <>
             <View style={styles.listHeader}>
               <Text style={styles.listHeaderText}>Recent Entries</Text>
-              {!isPremium && journalEntries.length > 3 && (
+              {!isPremium && journalEntries.length > 5 && (
                 <TouchableOpacity onPress={() => navigation.navigate('Paywall')}>
                   <Text style={styles.seeAllText}>See all with Premium</Text>
                 </TouchableOpacity>

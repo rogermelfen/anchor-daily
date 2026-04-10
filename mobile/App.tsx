@@ -12,12 +12,14 @@ import { LoadingScreen } from './src/components/LoadingScreen';
 import { initSentry, captureException, setUser as setSentryUser } from './src/services/sentry';
 import { startSyncListener, syncPendingEntries } from './src/services/offlineSync';
 import { useTheme } from './src/constants/theme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Initialize Sentry as early as possible
 initSentry();
 
 export default function App() {
-  const [isReady, setIsReady] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [showApp, setShowApp] = useState(false);
   const { setUser, setLoading, setSubscriptionStatus } = useAppStore();
 
   useEffect(() => {
@@ -91,18 +93,25 @@ export default function App() {
       // ensure the user always sees something.
     } finally {
       setLoading(false);
-      setIsReady(true);
+      setIsAppReady(true);
     }
   };
 
-  if (!isReady) {
-    return <LoadingScreen message="Preparing your reflection..." />;
+  if (!showApp) {
+    return (
+      <LoadingScreen
+        isAppReady={isAppReady}
+        onReady={() => setShowApp(true)}
+      />
+    );
   }
 
   return (
-    <ErrorBoundary fallbackMessage="Something unexpected happened. Tap below to restart the app.">
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <AppNavigator />
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary fallbackMessage="Something unexpected happened. Tap below to restart the app.">
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <AppNavigator />
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

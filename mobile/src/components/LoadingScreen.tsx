@@ -1,47 +1,86 @@
 // ============================================
-// Anchor Daily - Loading Screen
+// Anchor Daily - Splash / Loading Screen
 // ============================================
-// Shown while the app is initializing (checking auth,
-// loading persisted state, fetching first content).
+// Shown on every app launch while initializing.
+// Fades in on mount, fades out before handing off
+// to the main navigator.
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
 
 interface LoadingScreenProps {
-  message?: string;
+  onReady?: () => void;
+  isAppReady?: boolean;
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = 'Preparing your reflection...',
+  onReady,
+  isAppReady = false,
 }) => {
-  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const minTimeReached = useRef(false);
+  const appReadyRef = useRef(false);
 
+  // Fade + scale in on mount
   useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0.4,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim]);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: false,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: false,
+      }),
+    ]).start();
+
+    // Minimum display time: 2 seconds
+    const timer = setTimeout(() => {
+      minTimeReached.current = true;
+      if (appReadyRef.current) {
+        fadeOut();
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // When app finishes initializing
+  useEffect(() => {
+    if (isAppReady) {
+      appReadyRef.current = true;
+      if (minTimeReached.current) {
+        fadeOut();
+      }
+    }
+  }, [isAppReady]);
+
+  const fadeOut = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: false,
+    }).start(() => {
+      onReady?.();
+    });
+  };
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.circle, { opacity: pulseAnim }]} />
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.iconArea, { transform: [{ scale: scaleAnim }] }]}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="book-outline" size={48} color={COLORS.primary} />
+        </View>
+      </Animated.View>
       <Text style={styles.appName}>Anchor Daily</Text>
-      <Text style={styles.message}>{message}</Text>
-    </View>
+      <Text style={styles.tagline}>Faith for your everyday life.</Text>
+    </Animated.View>
   );
 };
 
@@ -52,21 +91,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  circle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primary,
+  iconArea: {
     marginBottom: SIZES.paddingLg,
   },
-  appName: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    color: COLORS.textPrimary,
-    marginBottom: SIZES.paddingSm,
+  iconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  message: {
-    fontSize: 14,
+  appName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SIZES.paddingXs + 2,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: SIZES.md,
     color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
 });

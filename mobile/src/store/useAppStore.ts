@@ -9,8 +9,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, FocusArea, Reflection, JournalEntry, SubscriptionStatus } from '../types';
+
+// RFC 4122-compliant UUID v4 generator (no external dependency required)
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 import { supabase } from '../services/supabase';
-import { FALLBACK_REFLECTIONS } from '../constants/fallbackContent';
+import { getFallbackReflection } from '../constants/fallbackContent';
 import { saveJournalOffline } from '../services/offlineSync';
 
 interface AppStore {
@@ -147,7 +156,7 @@ export const useAppStore = create<AppStore>()(
           } else {
             // Supabase returned no data — use fallback
             console.log('No data from Supabase, using fallback content');
-            set({ todayReflection: FALLBACK_REFLECTIONS[selectedFocus], lastError: null });
+            set({ todayReflection: getFallbackReflection(selectedFocus), lastError: null });
           }
         } catch (err) {
           // Network error — use fallback
@@ -155,7 +164,7 @@ export const useAppStore = create<AppStore>()(
           const { selectedFocus: focus } = get();
           if (focus) {
             set({
-              todayReflection: FALLBACK_REFLECTIONS[focus],
+              todayReflection: getFallbackReflection(focus),
               lastError: 'Could not connect to server. Showing offline content.',
             });
           }
@@ -220,8 +229,8 @@ export const useAppStore = create<AppStore>()(
         const { user } = get();
         if (!user) return null;
 
-        // Generate a local ID for optimistic update
-        const localId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        // Generate a valid UUID for optimistic update (must pass Supabase UUID check on offline sync)
+        const localId = generateUUID();
         const now = new Date().toISOString();
 
         // Optimistic local entry
@@ -297,11 +306,11 @@ export const useAppStore = create<AppStore>()(
       name: 'anchor-daily-store',
       storage: createJSONStorage(() => AsyncStorage),
       // Only persist these fields across app restarts:
-      partialState: (state: AppStore) => ({
+      partialize: (state: AppStore) => ({
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         selectedFocus: state.selectedFocus,
         themeMode: state.themeMode,
       }),
-    } as any
+    }
   )
 );

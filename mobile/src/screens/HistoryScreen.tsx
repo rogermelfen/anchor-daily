@@ -1,15 +1,16 @@
 // ============================================
 // Anchor Daily - History Screen (Premium)
 // ============================================
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { Card, Button } from '../components';
@@ -23,10 +24,14 @@ interface HistoryScreenProps {
 export const HistoryScreen: React.FC<HistoryScreenProps> = ({ navigation }) => {
   const { isPremium, reflectionHistory, fetchReflectionHistory, isAuthenticated } =
     useAppStore();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchReflectionHistory();
-  }, []);
+    if (isPremium) {
+      setIsLoading(true);
+      fetchReflectionHistory().finally(() => setIsLoading(false));
+    }
+  }, [isPremium]);
 
   const renderReflection = ({ item }: { item: Reflection }) => {
     const date = new Date(item.publish_date);
@@ -36,7 +41,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ navigation }) => {
     });
 
     return (
-      <TouchableOpacity activeOpacity={0.7}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('ReflectionDetail', { reflectionId: item.id })}
+      >
         <Card style={styles.reflectionCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardDate}>{dateStr}</Text>
@@ -89,7 +97,11 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ navigation }) => {
         <Text style={styles.subtitle}>Your past reflections</Text>
       </View>
 
-      {reflectionHistory.length === 0 ? (
+      {isLoading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : reflectionHistory.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="calendar-outline" size={48} color={COLORS.primaryLight} />
           <Text style={styles.emptyTitle}>No history yet</Text>

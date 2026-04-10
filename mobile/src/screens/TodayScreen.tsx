@@ -1,21 +1,23 @@
 // ============================================
 // Anchor Daily - Today / Daily Reflection Screen
 // ============================================
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { Card, TrialBanner, OfflineBanner } from '../components';
 import { useAppStore } from '../store/useAppStore';
 import { trackEvent, trackReflectionViewed } from '../services/analytics';
+import { FOCUS_LABELS, FOCUS_VERSES } from '../constants/focus';
 
 interface TodayScreenProps {
   navigation: any;
@@ -30,22 +32,32 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
     isAuthenticated,
   } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showExtended, setShowExtended] = useState(false);
+  const prevFocusRef = useRef(selectedFocus);
 
+  // Single effect: fetch when selectedFocus changes (runs on mount too).
+  // Avoids the double-fetch that happened when two useEffects both ran on mount.
   useEffect(() => {
-    fetchTodayReflection();
     trackEvent('app_opened');
-  }, []);
-
-  useEffect(() => {
-    fetchTodayReflection();
+    setIsLoading(true);
+    fetchTodayReflection().finally(() => setIsLoading(false));
   }, [selectedFocus]);
 
+  // Reset extended view whenever the reflection itself changes
+  useEffect(() => {
+    if (prevFocusRef.current !== selectedFocus) {
+      setShowExtended(false);
+      prevFocusRef.current = selectedFocus;
+    }
+  }, [selectedFocus]);
+
+  // Analytics: track when a new reflection is shown
   useEffect(() => {
     if (todayReflection && selectedFocus) {
       trackReflectionViewed(todayReflection.id, selectedFocus);
     }
-  }, [todayReflection?.id]);
+  }, [todayReflection?.id, selectedFocus]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -53,17 +65,6 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const focusLabels: Record<string, string> = {
-    stress: 'Stress & Anxiety',
-    decisions: 'Difficult Decisions',
-    relationships: 'Relationships & Conflict',
-  };
-
-  const focusVerses: Record<string, string> = {
-    stress: '"Cast all your anxiety on him." — 1 Pet. 5:7',
-    decisions: '"Trust in the Lord with all your heart." — Prov. 3:5',
-    relationships: '"Bear with each other and forgive." — Col. 3:13',
-  };
 
   const today = new Date();
   const dateString = today.toLocaleDateString('en-US', {
@@ -95,14 +96,18 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
           {selectedFocus && (
             <View style={styles.focusBadge}>
               <Text style={styles.focusBadgeText}>
-                {focusLabels[selectedFocus] || selectedFocus}
+                {FOCUS_LABELS[selectedFocus] || selectedFocus}
               </Text>
             </View>
           )}
         </View>
 
         {/* Reflection Card */}
-        {todayReflection ? (
+        {isLoading && !todayReflection ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : todayReflection ? (
           <>
             <Card style={styles.reflectionCard}>
               <Text style={styles.reflectionTitle}>{todayReflection.title}</Text>
@@ -143,21 +148,16 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({ navigation }) => {
               </Text>
             </Card>
 
-            {/* Question */}
-            <Card style={styles.questionCard}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="help-circle-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.sectionTitle}>Reflect & Pray</Text>
-              </View>
-              <Text style={styles.questionBody}>{todayReflection.question}</Text>
-              <TouchableOpacity
-                style={styles.journalPrompt}
-                onPress={() => navigation.navigate('Journal')}
-              >
-                <Ionicons name="create-outline" size={16} color={COLORS.primary} />
-                <Text style={styles.journalPromptText}>Write your thoughts and prayers in your journal</Text>
-              </TouchableOpacity>
-            </Card>
+            {/* Reflect & Pray CTA */}
+            <TouchableOpacity
+              style={styles.reflectButton}
+              onPress={() => navigation.navigate('Reflect')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="help-circle-outline" size={22} color={COLORS.textOnPrimary} />
+              <Text style={styles.reflectButtonText}>Reflect & Pray</Text>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textOnPrimary} />
+            </TouchableOpacity>
 
             {/* Premium upsell for free users */}
             {!isPremium && todayReflection.premium_extended_version && (
@@ -380,5 +380,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: SIZES.paddingSm,
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.paddingXxl * 2,
+  },
+  reflectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.radiusLg,
+    padding: SIZES.paddingMd,
+    marginTop: SIZES.paddingSm,
+  },
+  reflectButtonText: {
+    flex: 1,
+    fontSize: SIZES.md,
+    fontWeight: '700',
+    color: COLORS.textOnPrimary,
+    marginLeft: SIZES.paddingSm,
   },
 });

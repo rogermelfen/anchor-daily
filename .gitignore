@@ -42,3 +42,16 @@ coverage/
 # Google Services
 google-services.json
 GoogleService-Info.plist
+
+# Local dev tools
+.claude/
+
+# Seed scripts (local DB setup only)
+fix_seed.*
+inject_sql.js
+prepare_seed.js
+split_seed.js
+reflections_seed*.sql
+seed_*.sql
+seed_*.json
+seed_*.txt

@@ -1,21 +1,23 @@
 // ============================================
 // Anchor Daily - Paywall / Subscription Screen
 // ============================================
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { PurchasesPackage } from 'react-native-purchases';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { Button } from '../components';
 import { useAppStore } from '../store/useAppStore';
 import { trackPaywallViewed, trackEvent } from '../services/analytics';
+import { getOfferings, purchasePackage, restorePurchases } from '../services/purchases';
 
 interface PaywallScreenProps {
   navigation: any;
@@ -26,11 +28,48 @@ type PlanType = 'yearly' | 'monthly';
 export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated } = useAppStore();
+  const [restoring, setRestoring] = useState(false);
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const { isAuthenticated, setSubscriptionStatus } = useAppStore();
 
-  React.useEffect(() => {
+  useEffect(() => {
     trackPaywallViewed('paywall_screen');
+    loadOfferings();
   }, []);
+
+  const loadOfferings = async () => {
+    try {
+      const available = await getOfferings();
+      setPackages(available);
+    } catch {
+      // No offerings available — RevenueCat not configured yet
+    }
+  };
+
+  const getPackageForPlan = (plan: PlanType): PurchasesPackage | null => {
+    if (packages.length === 0) return null;
+    return packages.find((pkg) =>
+      plan === 'yearly'
+        ? pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('annual') || pkg.identifier.toLowerCase().includes('year')
+        : pkg.packageType === 'MONTHLY' || pkg.identifier.toLowerCase().includes('month')
+    ) ?? packages[0] ?? null;
+  };
+
+  // Derive displayed prices from RevenueCat when available; fall back to defaults
+  const yearlyPkg = getPackageForPlan('yearly');
+  const monthlyPkg = getPackageForPlan('monthly');
+  const yearlyPrice = yearlyPkg?.product?.priceString ?? '$39.99 / year';
+  const monthlyPrice = monthlyPkg?.product?.priceString ?? '$5.99 / month';
+  const yearlyMonthly = yearlyPkg
+    ? `Just ${(yearlyPkg.product.price / 12).toLocaleString('en-US', {
+        style: 'currency',
+        currency: yearlyPkg.product.currencyCode ?? 'USD',
+        maximumFractionDigits: 2,
+      })} / month`
+    : 'Just $3.33 / month';
+  // CTA label: show "Subscribe" instead of "Start Trial" if packages are loaded
+  // (RevenueCat controls trial eligibility — we shouldn't claim a trial if RC says otherwise)
+  const ctaLabel = packages.length === 0 ? 'Start 14-Day Free Trial' : 'Subscribe Now';
 
   const handleSubscribe = async () => {
     if (!isAuthenticated) {
@@ -45,18 +84,65 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
-    // In production, this would trigger RevenueCat purchase flow:
-    // await Purchases.purchasePackage(selectedPackage);
-    // For now, simulate:
-    setTimeout(() => {
-      setLoading(false);
+    const pkg = getPackageForPlan(selectedPlan);
+    if (!pkg) {
       Alert.alert(
-        'Purchase Flow',
-        'In production, this would open the native App Store / Google Play subscription dialog via RevenueCat.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        'Not Available',
+        'Subscriptions are not available yet. Please try again later.'
       );
-    }, 1000);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const customerInfo = await purchasePackage(pkg);
+      if (customerInfo) {
+        // If RevenueCat returns customerInfo without throwing, the purchase succeeded.
+        // We set 'active' regardless of entitlement key name — a misconfigured entitlement
+        // key in the RC dashboard should not override a confirmed successful purchase.
+        if (!customerInfo.entitlements.active['premium']) {
+          console.warn('[Paywall] Purchase succeeded but "premium" entitlement not found. Check RevenueCat dashboard entitlement ID.');
+        }
+        setSubscriptionStatus('active');
+        trackEvent('subscription_purchased', { plan: selectedPlan });
+        Alert.alert(
+          'Welcome to Premium!',
+          'Your subscription is now active. Enjoy full access to Anchor Daily.',
+          [{ text: 'Get Started', onPress: () => navigation.goBack() }]
+        );
+      }
+    } catch (error: any) {
+      if (!error?.userCancelled) {
+        Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const customerInfo = await restorePurchases();
+      if (customerInfo && customerInfo.entitlements.active['premium']) {
+        setSubscriptionStatus('active');
+        trackEvent('subscription_restored');
+        Alert.alert(
+          'Purchase Restored',
+          'Your subscription has been restored successfully.',
+          [{ text: 'Continue', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert(
+          'No Purchase Found',
+          'We could not find a previous purchase for this account.'
+        );
+      }
+    } catch {
+      Alert.alert('Restore Failed', 'Could not restore purchases. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
   };
 
   const features = [
@@ -98,8 +184,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
           <View style={styles.iconCircle}>
             <Ionicons name="sparkles" size={32} color={COLORS.accent} />
           </View>
-           <Text style={styles.title}>Deepen Your{'
-'}Daily Walk with God</Text>
+          <Text style={styles.title}>Deepen Your{'\n'}Daily Walk with God</Text>
           <Text style={styles.subtitle}>
             Unlock the full library of Scripture-based devotionals, extended reflections, and
             your complete prayer journal — all in one quiet place.
@@ -123,7 +208,6 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
 
         {/* Plan Selection */}
         <View style={styles.plans}>
-          {/* Yearly */}
           <TouchableOpacity
             style={[styles.planCard, selectedPlan === 'yearly' && styles.planCardSelected]}
             onPress={() => setSelectedPlan('yearly')}
@@ -140,13 +224,12 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
                     <Text style={styles.bestValueText}>Best Value</Text>
                   </View>
                 </View>
-                <Text style={styles.planPrice}>$39.99 / year</Text>
-                <Text style={styles.planSubprice}>Just $3.33 / month</Text>
+                <Text style={styles.planPrice}>{yearlyPrice}</Text>
+                <Text style={styles.planSubprice}>{yearlyMonthly}</Text>
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* Monthly */}
           <TouchableOpacity
             style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
             onPress={() => setSelectedPlan('monthly')}
@@ -158,7 +241,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
               </View>
               <View style={styles.planInfo}>
                 <Text style={styles.planTitle}>Monthly</Text>
-                <Text style={styles.planPrice}>$5.99 / month</Text>
+                <Text style={styles.planPrice}>{monthlyPrice}</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -166,7 +249,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
 
         {/* CTA */}
         <Button
-          title="Start 14-Day Free Trial"
+          title={ctaLabel}
           onPress={handleSubscribe}
           loading={loading}
           size="large"
@@ -178,8 +261,14 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ navigation }) => {
         </Text>
 
         {/* Restore */}
-        <TouchableOpacity style={styles.restoreButton}>
-          <Text style={styles.restoreText}>Restore Purchase</Text>
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestore}
+          disabled={restoring}
+        >
+          <Text style={styles.restoreText}>
+            {restoring ? 'Restoring...' : 'Restore Purchase'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

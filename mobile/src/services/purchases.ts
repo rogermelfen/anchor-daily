@@ -18,6 +18,8 @@ const extra = Constants.expoConfig?.extra ?? {};
 const REVENUECAT_IOS_KEY: string = extra.revenuecatIosKey || '';
 const REVENUECAT_ANDROID_KEY: string = extra.revenuecatAndroidKey || '';
 
+let isRevenueCatConfigured = false;
+
 /**
  * Initialize RevenueCat SDK.
  * Call this once on app startup.
@@ -36,6 +38,7 @@ export async function initializePurchases(userId?: string) {
     }
 
     Purchases.configure({ apiKey });
+    isRevenueCatConfigured = true;
 
     if (userId) {
       await Purchases.logIn(userId);
@@ -95,6 +98,7 @@ export async function restorePurchases(): Promise<CustomerInfo | null> {
  * Check current subscription status.
  */
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
+  if (!isRevenueCatConfigured) return 'none';
   try {
     const customerInfo = await Purchases.getCustomerInfo();
 

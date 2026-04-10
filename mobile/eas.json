@@ -12,6 +12,13 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SUPABASE_URL": "https://zqtqfufobhljjekzwncc.supabase.co",
+        "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdHFmdWZvYmhsampla3p3bmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxOTA4ODEsImV4cCI6MjA5MDc2Njg4MX0.rQcUue-CoM923_HPjCqFIUXzNIN-yi9q19nXRgpCous",
+        "PRIVACY_POLICY_URL": "https://anchordaily.app/privacy",
+        "TERMS_OF_SERVICE_URL": "https://anchordaily.app/terms"
+      },
       "ios": {
         "simulator": false
       }

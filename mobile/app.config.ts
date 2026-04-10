@@ -58,13 +58,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: '#7C9A8E',
       },
     ],
-    [
-      '@sentry/react-native/expo',
-      {
-        organization: process.env.SENTRY_ORG || 'YOUR_SENTRY_ORG',
-        project: process.env.SENTRY_PROJECT || 'anchor-daily',
-      },
-    ],
+    ...(process.env.SENTRY_DSN
+      ? [
+          [
+            '@sentry/react-native/expo',
+            {
+              organization: process.env.SENTRY_ORG || '',
+              project: process.env.SENTRY_PROJECT || 'anchor-daily',
+              uploadNativeSymbols: false,
+              autoUploadProguardMapping: false,
+            },
+          ] as const,
+        ]
+      : []),
   ],
   extra: {
     supabaseUrl: process.env.SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co',
@@ -75,7 +81,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     sentryOrg: process.env.SENTRY_ORG || '',
     sentryProject: process.env.SENTRY_PROJECT || 'anchor-daily',
     eas: {
-      projectId: process.env.EAS_PROJECT_ID || 'YOUR_EAS_PROJECT_ID',
+      projectId: process.env.EAS_PROJECT_ID || '4f85ed67-e14e-404f-8c55-8a4819588652',
     },
   },
 });
