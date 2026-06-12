@@ -390,6 +390,42 @@
     footer a:hover { color: white; }
     footer .footer-links { margin-bottom: 16px; }
 
+    /* BLOG */
+    .blog {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 48px;
+    }
+    .blog-card {
+      background: white;
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s;
+    }
+    .blog-card:hover { transform: translateY(-2px); }
+    .blog-card-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .blog-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .blog-card p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; flex: 1; }
+    .blog-card-link { margin-top: 18px; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+
     @media (max-width: 600px) {
       nav { padding: 16px 20px; }
       .pricing-cards { grid-template-columns: 1fr; }
@@ -537,6 +573,36 @@
       ⬇ Download for Android (.apk)
     </a>
     <div class="download-note">Android 8.0 or later · Enable "Install from unknown sources" in settings</div>
+  </section>
+
+  <!-- BLOG -->
+  <section class="blog">
+    <div class="section-label">From the Blog</div>
+    <h2 class="section-title">Faith for the real challenges</h2>
+    <div class="blog-grid">
+
+      <a class="blog-card" href="blog/daily-devotional-for-anxiety.html">
+        <div class="blog-card-tag">Stress &amp; Anxiety</div>
+        <h3>Your Morning Routine Has a Missing Piece</h3>
+        <p>Before we've had coffee, we've already seen three things that made us anxious. Here's what five minutes of stillness can actually change.</p>
+        <span class="blog-card-link">Read more →</span>
+      </a>
+
+      <a class="blog-card" href="blog/christian-devotional-app.html">
+        <div class="blog-card-tag">Getting Started</div>
+        <h3>How to Choose a Christian Devotional App</h3>
+        <p>Most devotional apps fail within two weeks. Here's what to look for — and what to avoid — when choosing one that will actually last.</p>
+        <span class="blog-card-link">Read more →</span>
+      </a>
+
+      <a class="blog-card" href="blog/bible-guidance-for-difficult-decisions.html">
+        <div class="blog-card-tag">Difficult Decisions</div>
+        <h3>When You Don't Know What to Do</h3>
+        <p>Scripture won't give you a map for the hard decisions. But a daily practice builds something better — a compass that works when the path isn't clear.</p>
+        <span class="blog-card-link">Read more →</span>
+      </a>
+
+    </div>
   </section>
 
   <!-- FOOTER -->
