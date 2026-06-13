@@ -1,122 +1,52 @@
-// ============================================
-// Anchor Daily - RevenueCat Subscription Service
-// ============================================
-// Reads API keys from app.config.ts -> extra,
-// which in turn reads from environment variables.
-// No hardcoded secrets in source code.
-
-import Purchases, {
-  PurchasesPackage,
-  CustomerInfo,
-} from 'react-native-purchases';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
+import { supabase } from './supabase';
 import { SubscriptionStatus } from '../types';
 
-const extra = Constants.expoConfig?.extra ?? {};
+export async function initializePurchases(_userId?: string) {}
 
-const REVENUECAT_IOS_KEY: string = extra.revenuecatIosKey || '';
-const REVENUECAT_ANDROID_KEY: string = extra.revenuecatAndroidKey || '';
-
-let isRevenueCatConfigured = false;
-
-/**
- * Initialize RevenueCat SDK.
- * Call this once on app startup.
- */
-export async function initializePurchases(userId?: string) {
+export async function openCheckout(plan: 'monthly' | 'yearly', userId: string): Promise<boolean> {
   try {
-    const apiKey =
-      Platform.OS === 'ios' ? REVENUECAT_IOS_KEY : REVENUECAT_ANDROID_KEY;
+    const returnUrl = 'anchordaily://payment-success';
+    const cancelUrl = 'anchordaily://payment-cancelled';
 
-    if (!apiKey) {
-      console.warn(
-        '[Anchor Daily] RevenueCat API key is not configured. ' +
-        'Set REVENUECAT_IOS_API_KEY / REVENUECAT_ANDROID_API_KEY in .env or EAS Secrets.'
-      );
-      return;
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: { plan, userId, returnUrl, cancelUrl },
+    });
+
+    if (error || !data?.url) {
+      console.error('Error creating checkout session:', error);
+      return false;
     }
 
-    Purchases.configure({ apiKey });
-    isRevenueCatConfigured = true;
-
-    if (userId) {
-      await Purchases.logIn(userId);
-    }
+    await Linking.openURL(data.url);
+    return true;
   } catch (error) {
-    console.error('Error initializing RevenueCat:', error);
+    console.error('Error opening checkout:', error);
+    return false;
   }
 }
 
-/**
- * Get available subscription packages.
- */
-export async function getOfferings(): Promise<PurchasesPackage[]> {
-  try {
-    const offerings = await Purchases.getOfferings();
-    if (offerings.current && offerings.current.availablePackages) {
-      return offerings.current.availablePackages;
-    }
-    return [];
-  } catch (error) {
-    console.error('Error fetching offerings:', error);
-    return [];
-  }
-}
-
-/**
- * Purchase a subscription package.
- */
-export async function purchasePackage(
-  pkg: PurchasesPackage
-): Promise<CustomerInfo | null> {
-  try {
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return customerInfo;
-  } catch (error: any) {
-    if (!error.userCancelled) {
-      console.error('Error purchasing package:', error);
-    }
-    return null;
-  }
-}
-
-/**
- * Restore previous purchases.
- */
-export async function restorePurchases(): Promise<CustomerInfo | null> {
-  try {
-    const customerInfo = await Purchases.restorePurchases();
-    return customerInfo;
-  } catch (error) {
-    console.error('Error restoring purchases:', error);
-    return null;
-  }
-}
-
-/**
- * Check current subscription status.
- */
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
-  if (!isRevenueCatConfigured) return 'none';
   try {
-    const customerInfo = await Purchases.getCustomerInfo();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return 'none';
 
-    // Check for active "premium" entitlement
-    if (customerInfo.entitlements.active['premium']) {
-      const entitlement = customerInfo.entitlements.active['premium'];
+    const { data } = await supabase
+      .from('users')
+      .select('subscription_status, trial_end_date')
+      .eq('id', user.id)
+      .single();
 
-      // Check if it's a trial period
-      if (entitlement.periodType === 'TRIAL') {
-        return 'trial';
-      }
+    if (!data) return 'none';
 
-      return 'active';
+    if (data.subscription_status === 'trial') {
+      const trialEnd = data.trial_end_date ? new Date(data.trial_end_date) : null;
+      if (trialEnd && trialEnd > new Date()) return 'trial';
+      return 'expired';
     }
 
-    return 'none';
-  } catch (error) {
-    console.error('Error checking subscription status:', error);
+    return (data.subscription_status as SubscriptionStatus) || 'none';
+  } catch {
     return 'none';
   }
 }

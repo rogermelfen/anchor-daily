@@ -75,8 +75,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co',
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || 'YOUR_ANON_KEY',
-    revenuecatIosKey: process.env.REVENUECAT_IOS_API_KEY || '',
-    revenuecatAndroidKey: process.env.REVENUECAT_ANDROID_API_KEY || '',
+    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     sentryDsn: process.env.SENTRY_DSN || '',
     sentryOrg: process.env.SENTRY_ORG || '',
     sentryProject: process.env.SENTRY_PROJECT || 'anchor-daily',
