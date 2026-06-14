@@ -124,6 +124,31 @@
     .center { text-align: center; }
     .center .sec-sub { margin: 16px auto 0; }
 
+    /* PHONE MOCKUP */
+    .mockup-wrap {
+      background: linear-gradient(180deg, var(--hero-end, #ece9e3) 0%, var(--surface) 100%);
+      padding: 20px 24px 72px;
+      display: flex;
+      justify-content: center;
+    }
+    .phone {
+      width: 280px;
+      background: var(--surface);
+      border-radius: 40px;
+      padding: 20px 16px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.15), 0 0 0 2px rgba(0,0,0,0.08);
+    }
+    .phone-notch { width: 100px; height: 28px; background: #111; border-radius: 14px; margin: 0 auto 20px; }
+    .phone-screen { background: var(--bg); border-radius: 24px; padding: 20px 16px; min-height: 460px; }
+    .sc-header { font-size: 0.7rem; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .sc-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+    .sc-card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .sc-label { font-size: 0.65rem; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .sc-text { font-size: 0.75rem; color: var(--text-2); line-height: 1.5; }
+    .sc-text strong { color: var(--text); }
+    .sc-question { background: rgba(124,154,142,0.08); border-left: 3px solid var(--primary); border-radius: 0 10px 10px 0; padding: 10px 12px; font-size: 0.72rem; color: var(--text-2); font-style: italic; line-height: 1.5; margin-top: 10px; }
+    .sc-btn { background: var(--primary); color: white; border-radius: 100px; padding: 10px; text-align: center; font-size: 0.75rem; font-weight: 700; margin-top: 14px; }
+
     /* HOW IT WORKS */
     #how-it-works { background: var(--surface); }
     .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 48px; margin-top: 64px; }
@@ -343,6 +368,26 @@
     <p class="hero-note">Free 14-day trial &nbsp;&middot;&nbsp; No credit card required</p>
   </div>
 </section>
+
+<div class="mockup-wrap">
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="sc-header">Today · Stress &amp; Anxiety</div>
+      <div class="sc-title">The Myth of Control</div>
+      <div class="sc-card">
+        <div class="sc-label">Today's Reflection</div>
+        <div class="sc-text">We often feel stressed because we try to control outcomes that are out of our hands. <strong>True peace begins the moment we hand the pen back to God.</strong></div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-label">Practical Step</div>
+        <div class="sc-text">When anxiety tightens your chest, physically open your hands. Say: "I cannot control this, but I trust the One who holds it."</div>
+      </div>
+      <div class="sc-question">"What outcome are you trying to control today that you need to release to God?"</div>
+      <div class="sc-btn">Write in Journal →</div>
+    </div>
+  </div>
+</div>
 
 <section id="how-it-works">
   <div class="sec-inner">
