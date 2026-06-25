@@ -4,9 +4,9 @@
   { "keyword": "christian meditation app", "status": "pending" },
   { "keyword": "short powerful devotions for today", "status": "pending" },
   { "keyword": "daily bible devotions", "status": "pending" },
-  { "keyword": "free daily word for today", "status": "pending" },
+  { "keyword": "free daily word for today", "status": "draft", "slug": "free-daily-word-for-today" },
   { "keyword": "short devotions", "status": "pending" },
-  { "keyword": "short daily devotions and prayers", "status": "pending" },
-  { "keyword": "short powerful devotions", "status": "pending" },
+  { "keyword": "short daily devotions and prayers", "status": "published", "slug": "short-daily-devotions-and-prayers" },
+  { "keyword": "short powerful devotions", "status": "draft", "slug": "short-powerful-devotions" },
   { "keyword": "short devotional for today", "status": "pending" }
 ]

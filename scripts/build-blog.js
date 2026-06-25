@@ -70,6 +70,11 @@ function postPageHtml(post, relatedLinks) {
   <title>${post.title}</title>
   <meta name="description" content="${post.metaDescription}" />
   <link rel="canonical" href="${DOMAIN}/blog/${post.slug}.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="${post.title}" />
+  <meta property="og:description" content="${post.metaDescription}" />
+  <meta property="og:url" content="${DOMAIN}/blog/${post.slug}.html" />
+  <meta property="og:site_name" content="Anchor Daily" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script type="application/ld+json">
@@ -181,6 +186,11 @@ function indexHtml(allPosts) {
   <title>Blog — Anchor Daily | Christian Devotional Insights</title>
   <meta name="description" content="Practical Christian devotional articles on anxiety, decision-making, and relationships. Faith for your everyday life." />
   <link rel="canonical" href="${DOMAIN}/blog/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Blog — Anchor Daily | Christian Devotional Insights" />
+  <meta property="og:description" content="Practical Christian devotional articles on anxiety, decision-making, and relationships. Faith for your everyday life." />
+  <meta property="og:url" content="${DOMAIN}/blog/" />
+  <meta property="og:site_name" content="Anchor Daily" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
