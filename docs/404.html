@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page not found — Anchor Daily</title>
+  <meta name="robots" content="noindex, follow">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: #1c1c1c;
+      background: #F5F0EB;
+      background-image:
+        radial-gradient(ellipse 70% 60% at 15% 65%, rgba(124,154,142,0.26) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 18%, rgba(212,165,116,0.22) 0%, transparent 55%);
+      line-height: 1.6;
+    }
+    .inner { max-width: 460px; }
+    .code { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; color: #5a7a6e; text-transform: uppercase; margin-bottom: 1rem; }
+    h1 { font-family: Georgia, serif; font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.15; margin-bottom: 1rem; }
+    p { color: #555; margin-bottom: 2rem; }
+    .links { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+    .links a {
+      display: inline-block;
+      padding: 0.75rem 1.6rem;
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #1c1c1c;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.1);
+      transition: transform 0.15s;
+    }
+    .links a:hover { transform: translateY(-1px); }
+    .links a.primary { background: #7C9A8E; border-color: #7C9A8E; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="inner">
+    <div class="code">Error 404</div>
+    <h1>This page doesn't exist</h1>
+    <p>The page you're looking for has moved or was never here. Let's get you back on solid ground.</p>
+    <div class="links">
+      <a href="/" class="primary">Home</a>
+      <a href="/blog/">Blog</a>
+    </div>
+  </div>
+</body>
+</html>
