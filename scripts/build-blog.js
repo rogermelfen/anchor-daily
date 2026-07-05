@@ -12,16 +12,33 @@ const ROOT = path.join(__dirname, '..');
 const POSTS_DIR = path.join(ROOT, 'blog-data', 'posts');
 const BLOG_DIR = path.join(ROOT, 'docs', 'blog');
 const DOMAIN = 'https://anchor-daily.com';
+const OG_IMAGE = `${DOMAIN}/og-image.png`;
+const SITEMAP_PATH = path.join(BLOG_DIR, '..', 'sitemap.xml');
+
+// Statiske sider i sitemap (lastmod = sist reelle endring, oppdateres manuelt)
+const STATIC_URLS = [
+  { loc: '/', changefreq: 'monthly', priority: '1.0', lastmod: '2026-07-04' },
+  { loc: '/privacy-policy.html', changefreq: 'yearly', priority: '0.3', lastmod: '2026-07-04' },
+  { loc: '/terms-of-service.html', changefreq: 'yearly', priority: '0.3', lastmod: '2026-07-04' },
+];
 
 // Eksisterende, manuelt skrevne innlegg som ikke styres av JSON-systemet.
 // Holdes som statiske kort i indeksen; selve HTML-filene røres ikke.
 const LEGACY_POSTS = [
   {
+    slug: 'christian-devotional-for-forgiveness',
+    tag: 'Relationships &amp; Conflict',
+    title: 'Christian Devotional for Forgiveness: When Someone Lets You Down',
+    cardDescription: "Forgiveness is one of the hardest things in any relationship. Here's how a daily devotional practice helps you move through conflict without losing yourself.",
+    date: '2026-07-02',
+    readTime: '5 min read'
+  },
+  {
     slug: 'short-daily-devotional-for-today',
     tag: 'Daily Devotional',
     title: 'Short Daily Devotional for Today — 2 Minutes That Change Everything',
     cardDescription: "You don't need an hour or a perfect morning. Two minutes of grounded Scripture-based reflection changes what you bring to the rest of the day.",
-    date: '2026-06-01',
+    date: '2026-06-12',
     readTime: '4 min read'
   },
   {
@@ -29,7 +46,7 @@ const LEGACY_POSTS = [
     tag: 'Stress &amp; Anxiety',
     title: 'Short Daily Devotional for Anxiety: Finding Peace Before the Day Begins',
     cardDescription: "Most of us start the day the same way: alarm, phone, scroll. Here's what two minutes of stillness can actually change — and why it works.",
-    date: '2026-06-01',
+    date: '2026-06-12',
     readTime: '4 min read'
   },
   {
@@ -37,7 +54,7 @@ const LEGACY_POSTS = [
     tag: 'Getting Started',
     title: 'How to Choose a Christian Devotional App (And Why Most Fall Short)',
     cardDescription: "Not all devotional apps are the same. Here's what to look for — and what to avoid — when choosing one that will actually last.",
-    date: '2026-06-01',
+    date: '2026-06-12',
     readTime: '4 min read'
   },
   {
@@ -45,13 +62,68 @@ const LEGACY_POSTS = [
     tag: 'Difficult Decisions',
     title: 'Daily Bible Devotions: How a Small Habit Builds Clarity for Hard Decisions',
     cardDescription: "Big decisions feel paralyzing. A daily practice of Scripture-based reflection won't give you a map — but it will give you a compass.",
-    date: '2026-06-01',
+    date: '2026-06-12',
     readTime: '4 min read'
   }
 ];
 
 function monthYear(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+
+function postJsonLd(post) {
+  const url = `${DOMAIN}/blog/${post.slug}.html`;
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.metaDescription,
+    author: { '@type': 'Organization', name: 'Anchor Daily' },
+    publisher: { '@type': 'Organization', name: 'Anchor Daily', url: DOMAIN },
+    datePublished: post.date,
+    url,
+    image: OG_IMAGE,
+    mainEntityOfPage: url,
+    inLanguage: 'en'
+  }, null, 2);
+}
+
+function blogJsonLd(allPosts) {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'Anchor Daily Blog',
+    url: `${DOMAIN}/blog/`,
+    description: 'Practical Christian devotional insights for anxiety, decisions and relationships.',
+    inLanguage: 'en',
+    publisher: { '@type': 'Organization', name: 'Anchor Daily', url: DOMAIN },
+    blogPost: allPosts.map(p => ({
+      '@type': 'BlogPosting',
+      headline: p.title.replace(/&amp;/g, '&'),
+      datePublished: p.date,
+      url: `${DOMAIN}/blog/${p.slug}.html`
+    }))
+  }, null, 2);
+}
+
+// og-/twitter-/favicon-blokk som deles av artikkel- og indeksmalen
+function socialMeta({ type, title, description, url, publishedTime }) {
+  return `  <meta property="og:type" content="${type}" />
+  <meta property="og:title" content="${esc(title)}" />
+  <meta property="og:description" content="${esc(description)}" />
+  <meta property="og:url" content="${url}" />
+  <meta property="og:image" content="${OG_IMAGE}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="Anchor Daily" />
+${publishedTime ? `  <meta property="article:published_time" content="${publishedTime}" />\n` : ''}  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${esc(title)}" />
+  <meta name="twitter:description" content="${esc(description)}" />
+  <meta name="twitter:image" content="${OG_IMAGE}" />
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />`;
 }
 
 function loadGeneratedPosts() {
@@ -70,24 +142,11 @@ function postPageHtml(post, relatedLinks) {
   <title>${post.title}</title>
   <meta name="description" content="${post.metaDescription}" />
   <link rel="canonical" href="${DOMAIN}/blog/${post.slug}.html" />
-  <meta property="og:type" content="article" />
-  <meta property="og:title" content="${post.title}" />
-  <meta property="og:description" content="${post.metaDescription}" />
-  <meta property="og:url" content="${DOMAIN}/blog/${post.slug}.html" />
-  <meta property="og:site_name" content="Anchor Daily" />
+${socialMeta({ type: 'article', title: post.title, description: post.metaDescription, url: `${DOMAIN}/blog/${post.slug}.html`, publishedTime: post.date })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": "${post.title}",
-    "description": "${post.metaDescription}",
-    "author": { "@type": "Organization", "name": "Anchor Daily" },
-    "publisher": { "@type": "Organization", "name": "Anchor Daily", "url": "${DOMAIN}" },
-    "datePublished": "${post.date}",
-    "url": "${DOMAIN}/blog/${post.slug}.html"
-  }
+${postJsonLd(post)}
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -168,6 +227,9 @@ ${relatedLinks.map(r => `        <a href="/blog/${r.slug}.html">${r.title}</a>`)
 `;
 }
 
+const INDEX_TITLE = 'Blog — Anchor Daily | Christian Devotional Insights';
+const INDEX_DESC = 'Practical Christian devotional articles on anxiety, decision-making, and relationships. Faith for your everyday life.';
+
 function indexHtml(allPosts) {
   const cards = allPosts.map(p => `
       <a class="post-card" href="/blog/${p.slug}.html">
@@ -183,14 +245,13 @@ function indexHtml(allPosts) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blog — Anchor Daily | Christian Devotional Insights</title>
-  <meta name="description" content="Practical Christian devotional articles on anxiety, decision-making, and relationships. Faith for your everyday life." />
+  <title>${INDEX_TITLE}</title>
+  <meta name="description" content="${INDEX_DESC}" />
   <link rel="canonical" href="${DOMAIN}/blog/" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="Blog — Anchor Daily | Christian Devotional Insights" />
-  <meta property="og:description" content="Practical Christian devotional articles on anxiety, decision-making, and relationships. Faith for your everyday life." />
-  <meta property="og:url" content="${DOMAIN}/blog/" />
-  <meta property="og:site_name" content="Anchor Daily" />
+${socialMeta({ type: 'website', title: INDEX_TITLE, description: INDEX_DESC, url: `${DOMAIN}/blog/` })}
+  <script type="application/ld+json">
+${blogJsonLd(allPosts)}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -261,6 +322,21 @@ ${cards}
 `;
 }
 
+function sitemapXml(allPosts) {
+  const newest = allPosts.length ? allPosts[0].date : undefined;
+  const urls = [
+    ...STATIC_URLS,
+    { loc: '/blog/', changefreq: 'weekly', priority: '0.8', lastmod: newest },
+    ...allPosts.map(p => ({ loc: `/blog/${p.slug}.html`, changefreq: 'monthly', priority: '0.8', lastmod: p.date })),
+  ];
+  const entries = urls.map(u => `  <url>
+    <loc>${DOMAIN}${u.loc}</loc>
+${u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>\n` : ''}    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
+}
+
 function main() {
   const generated = loadGeneratedPosts();
   const allPosts = [...LEGACY_POSTS, ...generated].sort((a, b) => b.date.localeCompare(a.date));
@@ -276,6 +352,9 @@ function main() {
 
   fs.writeFileSync(path.join(BLOG_DIR, 'index.html'), indexHtml(allPosts), 'utf8');
   console.log(`✅ Bygget docs/blog/index.html med ${allPosts.length} innlegg.`);
+
+  fs.writeFileSync(SITEMAP_PATH, sitemapXml(allPosts), 'utf8');
+  console.log(`✅ Oppdatert docs/sitemap.xml med ${allPosts.length} blogginnlegg.`);
 }
 
 main();
